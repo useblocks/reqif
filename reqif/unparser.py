@@ -31,89 +31,71 @@ from reqif.reqif_bundle import ReqIFBundle, ReqIFZBundle
 class ReqIFUnparser:
     @staticmethod
     def unparse(bundle: ReqIFBundle) -> str:
-        reqif_xml_output = '<?xml version="1.0" encoding="UTF-8"?>\n'
+        parts: List[str] = ['<?xml version="1.0" encoding="UTF-8"?>\n']
 
-        reqif_xml_output += ReqIFUnparser.unparse_namespace_info(bundle.namespace_info)
+        parts.append(ReqIFUnparser.unparse_namespace_info(bundle.namespace_info))
 
         if bundle.req_if_header is not None:
-            reqif_xml_output += ReqIFHeaderParser.unparse(bundle.req_if_header)
+            parts.append(ReqIFHeaderParser.unparse(bundle.req_if_header))
 
         if bundle.core_content is not None:
-            reqif_xml_output += "  <CORE-CONTENT>\n"
+            parts.append("  <CORE-CONTENT>\n")
             reqif_content = bundle.core_content.req_if_content
             if reqif_content:
-                reqif_xml_output += "    <REQ-IF-CONTENT>\n"
+                parts.append("    <REQ-IF-CONTENT>\n")
 
                 if reqif_content.data_types is not None:
-                    reqif_xml_output += "      <DATATYPES>\n"
+                    parts.append("      <DATATYPES>\n")
                     for data_type in reqif_content.data_types:
-                        reqif_xml_output += DataTypeParser.unparse(data_type)
-                    reqif_xml_output += "      </DATATYPES>\n"
+                        parts.append(DataTypeParser.unparse(data_type))
+                    parts.append("      </DATATYPES>\n")
 
                 if reqif_content.spec_types is not None:
-                    reqif_xml_output += "      <SPEC-TYPES>\n"
+                    parts.append("      <SPEC-TYPES>\n")
                     for spec_type in reqif_content.spec_types:
                         if isinstance(spec_type, ReqIFSpecObjectType):
-                            reqif_xml_output += SpecObjectTypeParser.unparse(spec_type)
+                            parts.append(SpecObjectTypeParser.unparse(spec_type))
                         elif isinstance(spec_type, ReqIFSpecRelationType):
-                            reqif_xml_output += SpecRelationTypeParser.unparse(
-                                spec_type
-                            )
+                            parts.append(SpecRelationTypeParser.unparse(spec_type))
                         elif isinstance(spec_type, ReqIFSpecificationType):
-                            reqif_xml_output += SpecificationTypeParser.unparse(
-                                spec_type
-                            )
+                            parts.append(SpecificationTypeParser.unparse(spec_type))
                         elif isinstance(spec_type, ReqIFRelationGroupType):
-                            reqif_xml_output += RelationGroupTypeParser.unparse(
-                                spec_type
-                            )
-                    reqif_xml_output += "      </SPEC-TYPES>\n"
+                            parts.append(RelationGroupTypeParser.unparse(spec_type))
+                    parts.append("      </SPEC-TYPES>\n")
 
                 if reqif_content.spec_objects is not None:
-                    reqif_xml_output += "      <SPEC-OBJECTS>\n"
-
+                    parts.append("      <SPEC-OBJECTS>\n")
                     for spec_object in reqif_content.spec_objects:
-                        reqif_xml_output += SpecObjectParser.unparse(spec_object)
-
-                    reqif_xml_output += "      </SPEC-OBJECTS>\n"
+                        parts.append(SpecObjectParser.unparse(spec_object))
+                    parts.append("      </SPEC-OBJECTS>\n")
 
                 if reqif_content.spec_relations is not None:
-                    reqif_xml_output += "      <SPEC-RELATIONS>\n"
-
+                    parts.append("      <SPEC-RELATIONS>\n")
                     for spec_relation in reqif_content.spec_relations:
-                        reqif_xml_output += SpecRelationParser.unparse(spec_relation)
-
-                    reqif_xml_output += "      </SPEC-RELATIONS>\n"
+                        parts.append(SpecRelationParser.unparse(spec_relation))
+                    parts.append("      </SPEC-RELATIONS>\n")
 
                 if reqif_content.specifications is not None:
-                    reqif_xml_output += "      <SPECIFICATIONS>\n"
-
+                    parts.append("      <SPECIFICATIONS>\n")
                     for specification in reqif_content.specifications:
-                        reqif_xml_output += ReqIFSpecificationParser.unparse(
-                            specification
-                        )
-
-                    reqif_xml_output += "      </SPECIFICATIONS>\n"
+                        parts.append(ReqIFSpecificationParser.unparse(specification))
+                    parts.append("      </SPECIFICATIONS>\n")
 
                 if reqif_content.spec_relation_groups is not None:
-                    reqif_xml_output += "      <SPEC-RELATION-GROUPS>\n"
-
+                    parts.append("      <SPEC-RELATION-GROUPS>\n")
                     for spec_relation_group in reqif_content.spec_relation_groups:
-                        reqif_xml_output += ReqIFRelationGroupParser.unparse(
-                            spec_relation_group
-                        )
+                        parts.append(ReqIFRelationGroupParser.unparse(spec_relation_group))
+                    parts.append("      </SPEC-RELATION-GROUPS>\n")
 
-                    reqif_xml_output += "      </SPEC-RELATION-GROUPS>\n"
-
-                reqif_xml_output += "    </REQ-IF-CONTENT>\n"
-            reqif_xml_output += "  </CORE-CONTENT>\n"
+                parts.append("    </REQ-IF-CONTENT>\n")
+            parts.append("  </CORE-CONTENT>\n")
 
         if bundle.tool_extensions_tag_exists:
-            reqif_xml_output += "  <TOOL-EXTENSIONS>\n"
-            reqif_xml_output += "  </TOOL-EXTENSIONS>\n"
+            parts.append("  <TOOL-EXTENSIONS>\n")
+            parts.append("  </TOOL-EXTENSIONS>\n")
 
-        reqif_xml_output += "</REQ-IF>\n"
-        return reqif_xml_output
+        parts.append("</REQ-IF>\n")
+        return "".join(parts)
 
     @staticmethod
     def unparse_namespace_info(namespace_info: ReqIFNamespaceInfo) -> str:

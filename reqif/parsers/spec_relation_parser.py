@@ -99,15 +99,15 @@ class SpecRelationParser:
 
     @staticmethod
     def unparse(spec_relation: ReqIFSpecRelation):
-        output = "        <SPEC-RELATION"
+        parts: list[str] = ["        <SPEC-RELATION"]
         if spec_relation.description is not None:
-            output += f' DESC="{spec_relation.description}"'
-        output += f' IDENTIFIER="{spec_relation.identifier}"'
+            parts.append(f' DESC="{spec_relation.description}"')
+        parts.append(f' IDENTIFIER="{spec_relation.identifier}"')
         if spec_relation.last_change is not None:
-            output += f' LAST-CHANGE="{spec_relation.last_change}"'
+            parts.append(f' LAST-CHANGE="{spec_relation.last_change}"')
         if spec_relation.long_name is not None:
-            output += f' LONG-NAME="{html.escape(spec_relation.long_name)}"'
-        output += ">\n"
+            parts.append(f' LONG-NAME="{html.escape(spec_relation.long_name)}"')
+        parts.append(">\n")
 
         children_tags: List[str]
         if spec_relation.xml_node is not None:
@@ -116,57 +116,32 @@ class SpecRelationParser:
             children_tags = ["TYPE", "SOURCE", "TARGET", "VALUES"]
         for tag in children_tags:
             if tag == "TYPE":
-                output += SpecRelationParser._unparse_spec_relation_type(spec_relation)
+                parts.append(
+                    f"          <TYPE>\n"
+                    f"            <SPEC-RELATION-TYPE-REF>{spec_relation.relation_type_ref}</SPEC-RELATION-TYPE-REF>\n"
+                    f"          </TYPE>\n"
+                )
             elif tag == "SOURCE":
-                output += SpecRelationParser._unparse_spec_relation_source(
-                    spec_relation
+                parts.append(
+                    f"          <SOURCE>\n"
+                    f"            <SPEC-OBJECT-REF>{spec_relation.source}</SPEC-OBJECT-REF>\n"
+                    f"          </SOURCE>\n"
                 )
             elif tag == "TARGET":
-                output += SpecRelationParser._unparse_spec_relation_target(
-                    spec_relation
+                parts.append(
+                    f"          <TARGET>\n"
+                    f"            <SPEC-OBJECT-REF>{spec_relation.target}</SPEC-OBJECT-REF>\n"
+                    f"          </TARGET>\n"
                 )
             elif tag == "VALUES":
                 if spec_relation.values_attribute is not None:
-                    output += AttributeValueParser.unparse_attribute_values(
-                        [spec_relation.values_attribute]
+                    parts.append(
+                        AttributeValueParser.unparse_attribute_values(
+                            [spec_relation.values_attribute]
+                        )
                     )
             else:
                 raise NotImplementedError(tag)
 
-        output += "        </SPEC-RELATION>\n"
-        return output
-
-    @staticmethod
-    def _unparse_spec_relation_type(spec_relation: ReqIFSpecRelation) -> str:
-        output = ""
-        output += "          <TYPE>\n"
-        output += "            "
-        output += (
-            "<SPEC-RELATION-TYPE-REF>"
-            f"{spec_relation.relation_type_ref}"
-            "</SPEC-RELATION-TYPE-REF>\n"
-        )
-        output += "          </TYPE>\n"
-        return output
-
-    @staticmethod
-    def _unparse_spec_relation_source(
-        spec_relation: ReqIFSpecRelation,
-    ) -> str:
-        output = ""
-        output += "          <SOURCE>\n"
-        output += "            "
-        output += f"<SPEC-OBJECT-REF>{spec_relation.source}</SPEC-OBJECT-REF>\n"
-        output += "          </SOURCE>\n"
-        return output
-
-    @staticmethod
-    def _unparse_spec_relation_target(
-        spec_relation: ReqIFSpecRelation,
-    ) -> str:
-        output = ""
-        output += "          <TARGET>\n"
-        output += "            "
-        output += f"<SPEC-OBJECT-REF>{spec_relation.target}</SPEC-OBJECT-REF>\n"
-        output += "          </TARGET>\n"
-        return output
+        parts.append("        </SPEC-RELATION>\n")
+        return "".join(parts)

@@ -13,6 +13,19 @@ from reqif.helpers.string.xhtml_indent import reqif_unindent_xhtml_string
 from reqif.models.reqif_spec_object import SpecObjectAttribute
 from reqif.models.reqif_types import SpecObjectAttributeType
 
+
+def _escape_xml_attr(s: str) -> str:
+    """Fast XML attribute escaping — skips replace chain when no special chars present."""
+    if "&" not in s and "<" not in s and ">" not in s and '"' not in s:
+        return s
+    return (
+        s.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+    )
+
+
 ATTRIBUTE_STRING_TEMPLATE = """\
             <ATTRIBUTE-VALUE-STRING THE-VALUE="{value}">
               <DEFINITION>
@@ -202,27 +215,32 @@ class AttributeValueParser:
         if len(attribute_values) == 0:
             return "          <VALUES/>\n"
 
-        output = ""
-        output += "          <VALUES>\n"
+        parts: List[str] = ["          <VALUES>\n"]
+        _a = parts.append  # local alias avoids repeated attribute lookup
         for attribute in attribute_values:
+            definition_ref = attribute.definition_ref
+            value = attribute.value
             if attribute.attribute_type == SpecObjectAttributeType.STRING:
-                assert isinstance(attribute.value, str), attribute.value
-                output += ATTRIBUTE_STRING_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=html.escape(attribute.value),
-                )
+                assert isinstance(value, str), value
+                _a('            <ATTRIBUTE-VALUE-STRING THE-VALUE="')
+                _a(_escape_xml_attr(value))
+                _a('">\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-STRING-REF>')
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-STRING-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-STRING>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.INTEGER:
-                assert isinstance(attribute.value, str)
-                output += ATTRIBUTE_INTEGER_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=attribute.value,
-                )
+                assert isinstance(value, str)
+                _a('            <ATTRIBUTE-VALUE-INTEGER THE-VALUE="')
+                _a(value)
+                _a('">\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-INTEGER-REF>')
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-INTEGER-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-INTEGER>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.REAL:
-                assert isinstance(attribute.value, str)
-                output += ATTRIBUTE_REAL_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=attribute.value,
-                )
+                assert isinstance(value, str)
+                _a('            <ATTRIBUTE-VALUE-REAL THE-VALUE="')
+                _a(value)
+                _a('">\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-REAL-REF>')
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-REAL-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-REAL>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.ENUMERATION:
                 if attribute.xml_node is not None:
                     children_tags = list(
@@ -235,49 +253,50 @@ class AttributeValueParser:
                 ) < children_tags.index("DEFINITION")
 
                 assert enum_values_then_definition_order is not None
-                assert isinstance(attribute.value, list)
+                assert isinstance(value, list)
                 enum_values: str = "".join(
-                    list(
-                        map(
-                            lambda v: ATTRIBUTE_ENUM_VALUE_TEMPLATE.format(value=v),
-                            attribute.value,
-                        )
-                    )
+                    f"                <ENUM-VALUE-REF>{v}</ENUM-VALUE-REF>\n"
+                    for v in value
                 ).rstrip()
 
                 if enum_values_then_definition_order:
-                    output += ATTRIBUTE_ENUMERATION_TEMPLATE.format(
-                        definition_ref=attribute.definition_ref,
-                        values=enum_values,
-                    )
+                    _a("            <ATTRIBUTE-VALUE-ENUMERATION>\n              <VALUES>\n")
+                    _a(enum_values)
+                    _a("\n              </VALUES>\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-ENUMERATION-REF>")
+                    _a(definition_ref)
+                    _a("</ATTRIBUTE-DEFINITION-ENUMERATION-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-ENUMERATION>\n")
                 else:
-                    output += ATTRIBUTE_ENUMERATION_TEMPLATE_REVERSE.format(
-                        definition_ref=attribute.definition_ref,
-                        values=enum_values,
-                    )
+                    _a("            <ATTRIBUTE-VALUE-ENUMERATION>\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-ENUMERATION-REF>")
+                    _a(definition_ref)
+                    _a("</ATTRIBUTE-DEFINITION-ENUMERATION-REF>\n              </DEFINITION>\n              <VALUES>\n")
+                    _a(enum_values)
+                    _a("\n              </VALUES>\n            </ATTRIBUTE-VALUE-ENUMERATION>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.DATE:
-                assert isinstance(attribute.value, str)
-                output += ATTRIBUTE_DATE_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=attribute.value,
-                )
+                assert isinstance(value, str)
+                _a('            <ATTRIBUTE-VALUE-DATE THE-VALUE="')
+                _a(value)
+                _a('">\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-DATE-REF>')
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-DATE-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-DATE>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.XHTML:
-                assert isinstance(attribute.value, str)
-                output += ATTRIBUTE_XHTML_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=attribute.value,
-                )
+                assert isinstance(value, str)
+                _a("            <ATTRIBUTE-VALUE-XHTML>\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-XHTML-REF>")
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-XHTML-REF>\n              </DEFINITION>\n              <THE-VALUE>")
+                _a(value)
+                _a("</THE-VALUE>\n            </ATTRIBUTE-VALUE-XHTML>\n")
             elif attribute.attribute_type == SpecObjectAttributeType.BOOLEAN:
-                assert isinstance(attribute.value, str)
-                output += ATTRIBUTE_BOOLEAN_TEMPLATE.format(
-                    definition_ref=attribute.definition_ref,
-                    value=attribute.value,
-                )
+                assert isinstance(value, str)
+                _a('            <ATTRIBUTE-VALUE-BOOLEAN THE-VALUE="')
+                _a(value)
+                _a('">\n              <DEFINITION>\n                <ATTRIBUTE-DEFINITION-BOOLEAN-REF>')
+                _a(definition_ref)
+                _a("</ATTRIBUTE-DEFINITION-BOOLEAN-REF>\n              </DEFINITION>\n            </ATTRIBUTE-VALUE-BOOLEAN>\n")
             else:
                 raise NotImplementedError(attribute)
 
-        output += "          </VALUES>\n"
-        return output
+        _a("          </VALUES>\n")
+        return "".join(parts)
 
     @staticmethod
     def parse_xhtml_attribute_value(xml_attribute_value) -> SpecObjectAttribute:

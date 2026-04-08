@@ -52,19 +52,17 @@ class SpecObjectParser:
 
     @staticmethod
     def unparse(spec_object: ReqIFSpecObject) -> str:
-        output = ""
-
-        output += "        <SPEC-OBJECT"
+        parts: list[str] = ["        <SPEC-OBJECT"]
         if spec_object.description is not None:
-            output += f' DESC="{spec_object.description}"'
+            parts.append(f' DESC="{spec_object.description}"')
 
-        output += f' IDENTIFIER="{spec_object.identifier}"'
+        parts.append(f' IDENTIFIER="{spec_object.identifier}"')
 
         if spec_object.last_change:
-            output += f' LAST-CHANGE="{spec_object.last_change}"'
+            parts.append(f' LAST-CHANGE="{spec_object.last_change}"')
         if spec_object.long_name is not None:
-            output += f' LONG-NAME="{spec_object.long_name}"'
-        output += ">\n"
+            parts.append(f' LONG-NAME="{spec_object.long_name}"')
+        parts.append(">\n")
 
         if spec_object.xml_node is not None:
             children_tags = list(map(lambda el: el.tag, list(spec_object.xml_node)))
@@ -75,27 +73,22 @@ class SpecObjectParser:
 
         for child_tag in children_tags:
             if child_tag == "VALUES":
-                output += AttributeValueParser.unparse_attribute_values(
-                    spec_object.attributes
+                parts.append(
+                    AttributeValueParser.unparse_attribute_values(
+                        spec_object.attributes
+                    )
                 )
             elif child_tag == "TYPE":
-                output += SpecObjectParser._unparse_spec_object_type(spec_object)
+                parts.append(
+                    f"          <TYPE>\n"
+                    f"            <SPEC-OBJECT-TYPE-REF>"
+                    f"{spec_object.spec_object_type}"
+                    f"</SPEC-OBJECT-TYPE-REF>\n"
+                    f"          </TYPE>\n"
+                )
             else:
                 print(f"warning: Unknown child tag: {child_tag}.")  # noqa: T201
 
-        output += "        </SPEC-OBJECT>\n"
+        parts.append("        </SPEC-OBJECT>\n")
 
-        return output
-
-    @staticmethod
-    def _unparse_spec_object_type(spec_object: ReqIFSpecObject):
-        output = ""
-        output += (
-            "          <TYPE>\n"
-            f"            "
-            f"<SPEC-OBJECT-TYPE-REF>"
-            f"{spec_object.spec_object_type}"
-            f"</SPEC-OBJECT-TYPE-REF>\n"
-            "          </TYPE>\n"
-        )
-        return output
+        return "".join(parts)

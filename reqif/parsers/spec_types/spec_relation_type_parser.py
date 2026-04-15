@@ -15,12 +15,15 @@ class SpecRelationTypeParser:
         is_self_closed = lxml_is_self_closed_tag(xml_spec_relation_type_xml)
 
         xml_attributes = xml_spec_relation_type_xml.attrib
-        # Expecting all tools to implement IDENTIFIER and LONG-NAME.
+        # IDENTIFIER is required by the ReqIF XSD schema; LONG-NAME is optional.
         try:
             identifier = xml_attributes["IDENTIFIER"]
-            long_name = xml_attributes["LONG-NAME"]
         except Exception:
             raise NotImplementedError(xml_attributes) from None
+
+        long_name: Optional[str] = (
+            xml_attributes["LONG-NAME"] if "LONG-NAME" in xml_attributes else None
+        )
 
         description: Optional[str] = (
             xml_attributes["DESC"] if "DESC" in xml_attributes else None
